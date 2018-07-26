@@ -1,0 +1,10 @@
+config.py
+last_round_id
+*.log
+*.png
+*.pyc
+*test*
+
+.idea
+venv
+__pycache__
