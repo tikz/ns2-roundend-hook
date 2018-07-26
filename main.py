@@ -1,5 +1,7 @@
+import datetime
 import io
 import json
+import logging
 import time
 
 import PIL.ImageOps
@@ -7,6 +9,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pymysql
+import pytz
 import requests
 from PIL import Image
 from scipy.interpolate import interp1d
@@ -14,11 +17,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 import config
 import query
-
-import datetime
-import pytz
-import math
-import logging
 
 logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', level=logging.INFO)
 
