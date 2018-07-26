@@ -191,7 +191,7 @@ class Round:
                     "title": f'**`#{self.round_info["roundId"]} {self.round_info["mapName"]}`  {time.strftime("%H:%M:%S", time.gmtime(self.round_info["roundLength"]))}**',
                     "color": color,
                     "timestamp": datetime.datetime.now(tz).isoformat(),
-                    "description": "Marines wins" if self.round_info['winningTeam'] == 1 else "Aliens wins",
+                    "description": "Marines win" if self.round_info['winningTeam'] == 1 else "Aliens win",
                     "fields": [
                         {
                             "name": "Marines",
@@ -243,25 +243,24 @@ class LastPostedRound:
         f.close()
         return int(last_round_id)
 
+if __name__ == '__main__':
+    lpr = LastPostedRound()
+    while True:
+        db.execute(query.LAST_ROUND)
+        last_round = db.fetchall()[0]['roundId']
 
-lpr = LastPostedRound()
+        last_posted_round = lpr.get()
 
-while True:
-    db.execute(query.LAST_ROUND)
-    last_round = db.fetchall()[0]['roundId']
+        if last_round > last_posted_round:
+            db.execute(query.ROUNDS_GREATER.format(last_posted_round))
+            new_rounds = db.fetchall()
 
-    last_posted_round = lpr.get()
+            logging.info(f'Found {len(new_rounds)} new rounds.')
 
-    if last_round > last_posted_round:
-        db.execute(query.ROUNDS_GREATER.format(last_posted_round))
-        new_rounds = db.fetchall()
+            for r in new_rounds:
+                round_id = r['roundId']
+                logging.info(f'Getting round ID {round_id}')
+                Round(round_id)
+                lpr.set(round_id)
 
-        logging.info(f'Found {len(new_rounds)} new rounds.')
-
-        for r in new_rounds:
-            round_id = r['roundId']
-            logging.info(f'Getting round ID {round_id}')
-            Round(round_id)
-            lpr.set(round_id)
-
-    time.sleep(config.CHECK_DELAY)
+        time.sleep(config.CHECK_DELAY)
