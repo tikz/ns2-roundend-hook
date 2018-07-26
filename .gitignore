@@ -1,5 +1,6 @@
 config.py
 last_round_id
+*.swp
 *.log
 /*.png
 *.pyc
