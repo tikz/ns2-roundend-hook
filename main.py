@@ -209,9 +209,6 @@ class Round:
                             "inline": True
                         }
                     ],
-                    "thumbnail": {
-                        "url": "https://upload.wikimedia.org/wikipedia/commons/3/38/4-Nature-Wallpapers-2014-1_ukaavUI.jpg"
-                    },
                     "footer": {
                         "text": "https://github.com/Tikzz/ns2-roundend-hook",
                         "icon_url": "https://i.imgur.com/J7euM0p.png"
