@@ -213,7 +213,7 @@ class Round:
                         "url": "https://upload.wikimedia.org/wikipedia/commons/3/38/4-Nature-Wallpapers-2014-1_ukaavUI.jpg"
                     },
                     "footer": {
-                        "text": "https://github.com/Tikzz/discord-ns2",
+                        "text": "https://github.com/Tikzz/ns2-roundend-hook",
                         "icon_url": "https://i.imgur.com/J7euM0p.png"
                     }
                 }
@@ -271,6 +271,5 @@ while True:
             logging.info(f'Getting round ID {round_id}')
             Round(round_id)
             lpr.set(round_id)
-    else:
-        logging.info('No new rounds.')
+
     time.sleep(config.CHECK_DELAY)

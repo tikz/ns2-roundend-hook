@@ -1,0 +1,13 @@
+[Unit]
+Description=NS2 RoundEnd Discord webhook
+After=network.target
+
+[Service]
+Type=simple
+User=ns2-roundend
+WorkingDirectory=/home/ns2-roundend/ns2-roundend-hook
+ExecStart=/home/ns2-roundend/ns2-roundend-hook/venv/bin/python /home/ns2-roundend/ns2-roundend-hook/main.py Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
