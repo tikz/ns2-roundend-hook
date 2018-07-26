@@ -5,6 +5,8 @@ import logging
 import time
 
 import PIL.ImageOps
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
