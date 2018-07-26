@@ -46,22 +46,17 @@ class Heatmap():
         self.xz_max = max([self.s_x / 2, self.s_z / 2])
 
         if mode == 'all':
-            self.db.execute(query.ALL_KILLFEED.format(self.map, 1))
-            self.marine_kills = np.array(
-                [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
+            kf_query = query.ALL_KILLFEED
+        else:
+            kf_query = query.ROUND_KILLFEED
 
-            self.db.execute(query.ALL_KILLFEED.format(self.map, 2))
-            self.alien_kills = np.array(
-                [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
+        self.db.execute(kf_query.format(self.map, 1, id))
+        self.marine_kills = np.array(
+            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
 
-        if mode == 'round':
-            self.db.execute(query.ROUND_KILLFEED.format(1, id))
-            self.marine_kills = np.array(
-                [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
-
-            self.db.execute(query.ROUND_KILLFEED.format(2, id))
-            self.alien_kills = np.array(
-                [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
+        self.db.execute(kf_query.format(self.map, 2, id))
+        self.alien_kills = np.array(
+            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
 
         self.create()
 

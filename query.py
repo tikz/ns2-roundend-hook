@@ -2,7 +2,7 @@ MAP_EXTENT = 'SELECT minimapExtents FROM RoundInfo where mapName = "{}" limit 1'
 
 ALL_KILLFEED = 'select killerPosition from KillFeed kf inner join RoundInfo ri on ri.roundId = kf.roundId where doerLocation is null and mapName = "{}" and killerTeamNumber = {} and killerLocation is not null'
 
-ROUND_KILLFEED = 'select killerPosition from KillFeed kf inner join RoundInfo ri on ri.roundId = kf.roundId where doerLocation is null and killerTeamNumber = {} and killerLocation is not null and kf.roundId = {}'
+ROUND_KILLFEED = 'select killerPosition from KillFeed kf inner join RoundInfo ri on ri.roundId = kf.roundId where doerLocation is null and mapName = "{}" and killerTeamNumber = {} and killerLocation is not null and kf.roundId = {}'
 
 ROUND_PLAYERS = 'select * from PlayerRoundStats where roundId = {}'
 
