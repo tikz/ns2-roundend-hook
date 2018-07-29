@@ -6,11 +6,14 @@ import time
 
 import PIL.ImageOps
 import matplotlib as mpl
+
 mpl.use('Agg')
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pymysql
+
+pymysql.install_as_MySQLdb()
 import pytz
 import requests
 from PIL import Image
@@ -23,9 +26,29 @@ import query
 logging.basicConfig(format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', level=logging.INFO)
 
 tz = pytz.timezone(config.TIMEZONE)
-conn = pymysql.connect(host=config.MYSQL_HOST, user=config.MYSQL_USER, passwd=config.MYSQL_PASS,
-                       db=config.MYSQL_DB)
-db = conn.cursor(pymysql.cursors.DictCursor)
+
+
+class Database():
+    def __enter__(self):
+        self.conn = pymysql.connect(host=config.MYSQL_HOST, user=config.MYSQL_USER, passwd=config.MYSQL_PASS,
+                                    db=config.MYSQL_DB)
+        self.cursor = self.conn.cursor()
+        return self
+
+    def execute(self, query):
+        class Wrapper():
+            def __init__(self, cursor, query):
+                self.cursor = cursor
+                self.cursor.execute(query)
+
+            def fetchall(self):
+                columns = [col[0] for col in self.cursor.description]
+                return [dict(zip(columns, row)) for row in self.cursor.fetchall()]
+
+        return Wrapper(self.cursor, query)
+
+    def __exit__(self, type, value, traceback):
+        self.conn.close()
 
 
 class Heatmap():
@@ -36,10 +59,8 @@ class Heatmap():
         self.map_width = 1024
         self.map_height = 1024
 
-        self.db = db
-
-        self.db.execute(query.MAP_EXTENT.format(self.map))
-        extents = json.loads(self.db.fetchall()[0]['minimapExtents'])
+        with Database() as db:
+            extents = json.loads(db.execute(query.MAP_EXTENT.format(self.map)).fetchall()[0]['minimapExtents'])
 
         self.o_x, self.o_y, self.o_z = [float(i) for i in extents['origin'].split(' ')]
         self.s_x, self.s_y, self.s_z = [float(i) for i in extents['scale'].split(' ')]
@@ -50,13 +71,15 @@ class Heatmap():
         else:
             kf_query = query.ROUND_KILLFEED
 
-        self.db.execute(kf_query.format(self.map, 1, id))
+        with Database() as db:
+            marine_kf = db.execute(kf_query.format(self.map, 1, id)).fetchall()
         self.marine_kills = np.array(
-            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
+            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in marine_kf])
 
-        self.db.execute(kf_query.format(self.map, 2, id))
+        with Database() as db:
+            alien_kf = db.execute(kf_query.format(self.map, 2, id)).fetchall()
         self.alien_kills = np.array(
-            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in self.db.fetchall()])
+            [self.coord_to_map(*x['killerPosition'].split(' ')) for x in alien_kf])
 
         self.create()
 
@@ -127,21 +150,19 @@ class Heatmap():
 
 class Round:
     def __init__(self, round_id):
-        self.db = db
-        self.db.execute(query.ROUND_INFO.format(round_id))
-        self.round_info = self.db.fetchall()[0]
+        with Database() as db:
+            self.round_info = db.execute(query.ROUND_INFO.format(round_id)).fetchall()[0]
+            self.players = db.execute(query.ROUND_PLAYERS.format(round_id)).fetchall()
 
-        self.db.execute(query.ROUND_PLAYERS.format(round_id))
-        self.players = self.db.fetchall()
-        self.marines = [x for x in self.players if x['teamNumber'] == 1]
-        self.aliens = [x for x in self.players if x['teamNumber'] == 2]
-        self.marines.sort(key=lambda x: x['kills'], reverse=True)
-        self.aliens.sort(key=lambda x: x['kills'], reverse=True)
+            self.marines = [x for x in self.players if x['teamNumber'] == 1]
+            self.aliens = [x for x in self.players if x['teamNumber'] == 2]
+            self.marines.sort(key=lambda x: x['kills'], reverse=True)
+            self.aliens.sort(key=lambda x: x['kills'], reverse=True)
 
-        for i, player in enumerate(self.aliens):
-            self.db.execute(query.ROUND_PLAYER_LIFEFORMS.format(round_id, player['steamId']))
-            lifeforms = [x['class'] for x in self.db.fetchall()]
-            self.aliens[i]['lifeforms'] = lifeforms
+            for i, player in enumerate(self.aliens):
+                lifeforms = [x['class'] for x in
+                             db.execute(query.ROUND_PLAYER_LIFEFORMS.format(round_id, player['steamId'])).fetchall()]
+                self.aliens[i]['lifeforms'] = lifeforms
 
         # Quitters or late joiners, players with < 90% of the game length
         self.quitters_late_joiners = [x for x in self.players if
@@ -243,17 +264,18 @@ class LastPostedRound:
         f.close()
         return int(last_round_id)
 
+
 if __name__ == '__main__':
     lpr = LastPostedRound()
     while True:
-        db.execute(query.LAST_ROUND)
-        last_round = db.fetchall()[0]['roundId']
+        with Database() as db:
+            last_round = db.execute(query.LAST_ROUND).fetchall()[0]['roundId']
 
         last_posted_round = lpr.get()
 
         if last_round > last_posted_round:
-            db.execute(query.ROUNDS_GREATER.format(last_posted_round))
-            new_rounds = db.fetchall()
+            with Database() as db:
+                new_rounds = db.execute(query.ROUNDS_GREATER.format(last_posted_round)).fetchall()
 
             logging.info(f'Found {len(new_rounds)} new rounds.')
 
@@ -262,5 +284,7 @@ if __name__ == '__main__':
                 logging.info(f'Getting round ID {round_id}')
                 Round(round_id)
                 lpr.set(round_id)
+        else:
+            logging.info(f'No new rounds found (LastPosted: {last_posted_round}, LastDB: {last_round})')
 
         time.sleep(config.CHECK_DELAY)
